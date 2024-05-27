@@ -24,7 +24,6 @@ public:
 		};
 
 		for (std::size_t i = 0u; i < threadCount; ++i) {
-			//threads.emplace_back(std::thread(&ThreadPool::ThreadEntry<Callable, Args...>, this, callable, i, std::forward<Args>(args)...));
 			threads.emplace_back(std::thread(f, i));
 		}
 	}
@@ -37,7 +36,6 @@ public:
 	//	};
 
 	//	for (std::size_t i = 0u; i < threadCount; ++i) {
-	//		//threads.emplace_back(std::jthread(&ThreadPool::ThreadEntry<Callable, Args...>, this, callable, i, std::forward<Args>(args)...));
 	//		threads.emplace_back(std::jthread(f, i));
 	//	}
 	//}
@@ -55,11 +53,6 @@ public:
 private:
 	//could also use new std::jthread (C++ 20) instead of ScopedThread
 	std::vector<ScopedThread> threads;
-
-	//template<typename Callable, typename... Args>
-	//void ThreadEntry(std::size_t threadIndex, Callable callable, Args&&... args) requires std::invocable< std::size_t, Callable, Args...> {
-	//	std::invoke(callable, std::forward<Args>(args)..., std::forward<std::size_t>(threadIndex));
-	//}
 };
 
 #endif

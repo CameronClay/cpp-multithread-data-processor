@@ -1,4 +1,5 @@
 #include "TaskPool.h"
+#include <utility>
 
 TaskPool::TaskPool()
 	:
@@ -13,7 +14,7 @@ void TaskPool::CreateThreads(std::size_t threadCount) {
 	auto f = [this](std::size_t threadIndex) {
 		DoTasks(threadIndex);
 	};
-	threads.CreateThreads(threadCount, f);
+	threads.CreateThreads(threadCount, std::move(f));
 	//threads.CreateThreads(threadCount, Function<void(std::size_t)>(f));
 }
 
