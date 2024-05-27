@@ -47,9 +47,6 @@
     <ClInclude Include="Queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="iostreamUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ScopedThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
