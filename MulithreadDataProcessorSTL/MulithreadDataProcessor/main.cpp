@@ -20,15 +20,18 @@ using std::chrono::high_resolution_clock;
 using std::chrono::duration;
 using namespace std::chrono_literals;
 
-const std::size_t NFUNC_CALLS = 1000000;
+const std::size_t NFUNC_CALLS = 3000000;
 const std::size_t NTRIALS = 100;
 const std::size_t THREAD_COUNT_MAX = std::thread::hardware_concurrency();
 
-
-//no inline so function call doesnt get optimized out by the compiler
-__declspec(noinline) void Cubed(std::size_t threadIndex, int& data) {
+void Cubed(std::size_t threadIndex, int& data) {
 	data = (data * data * data);
 }
+
+//use lambda to test performance to make benchmarks more fair (need a lambda for algorithms library)
+auto CubedLambda = [](std::size_t threadIndex, int& data) {
+	Cubed(threadIndex, data);
+};
 
 double GetBenchResult(const high_resolution_clock::time_point& t1) {
 	return duration<double, std::milli>(high_resolution_clock::now() - t1).count();
@@ -54,7 +57,7 @@ double BenchLinear(std::vector<int>& data, std::size_t threadIndex) {
 	auto t1 = high_resolution_clock::now();
 
 	for (std::size_t i = 0u; i < NFUNC_CALLS; ++i) {
-		Cubed(threadIndex, data[i]);
+		CubedLambda(threadIndex, data[i]);
 	}
 
 	return GetBenchResult(t1); //measure performance
@@ -82,25 +85,40 @@ double BenchMultithreaded(std::vector<int>& data, std::size_t threadIndex) {
 
 	auto t1 = high_resolution_clock::now();
 
-	ParallelProcessor mp(taskPool, &Cubed);
+	ParallelProcessor mp(taskPool, CubedLambda);
+	//ParallelProcessor mp(taskPool, static_cast<decltype(CubedLambda)>(CubedLambda)); //static_cast converts lvalue to rvalue (not ncessary with perfect forwarding)
+	//ParallelProcessor mp(taskPool, static_cast<void(*)(std::size_t, int&)>(CubedLambda));
+	//ParallelProcessor mp(taskPool, &Cubed);
 	 
 	//Functor functor;
 	//ParallelProcessor mp(taskPool, std::move(functor));
-	// 
+	 
 	//auto f = [&](std::size_t threadIndex, int& i) {
-	//	i *= 2;
+	//	Cubed(threadIndex, i);
 	//};	 
 	//ParallelProcessor mp(taskPool, std::move(f));
 
-	//ParallelProcessor mp(taskPool, std::function(Cubed));
+	//ParallelProcessor mp(taskPool, std::function(CubedLambda));
 
-	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(&Cubed));
+	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(CubedLambda));
 
 	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (threadIndex * 10u), threadIndex);
 	//mp.AbortProcessing();
 	mp.WaitForCompetion();
 
 	return GetBenchResult(t1);
+}
+
+double BenchForEach(std::vector<int>& data, std::size_t threadIndex) {
+	GenerateData(data);
+
+	auto t1 = high_resolution_clock::now();
+
+	std::for_each(std::execution::par, std::begin(data), std::end(data), [](auto& data) { // passing lambda directly provides massive speed improvement (probably because Cubed is getting inlined)
+		CubedLambda(0u, data);
+	});
+
+	return GetBenchResult(t1); //measure performance
 }
 
 //this is incredibly slow because it launches a new task NFUNC_CALLS times
@@ -112,22 +130,10 @@ double BenchAsync(std::vector<int>& data, std::size_t threadIndex) {
 	std::vector<std::future<void>> handles(NFUNC_CALLS);
 	std::transform(std::begin(data), std::end(data), std::begin(handles), [](auto& num) {
 		return std::async(std::launch::async,
-			&Cubed, 0u, std::ref(num));
+			CubedLambda, 0u, std::ref(num));
 	});
 	std::for_each(std::begin(handles), std::end(handles), [](auto& handle) {
 		handle.get();
-	});
-
-	return GetBenchResult(t1); //measure performance
-}
-
-double BenchForEach(std::vector<int>& data, std::size_t threadIndex) {
-	GenerateData(data);
-
-	auto t1 = high_resolution_clock::now();
-
-	std::for_each(std::execution::par, std::begin(data), std::end(data), [](auto& data) {
-		Cubed(0u, data);
 	});
 
 	return GetBenchResult(t1); //measure performance
@@ -179,7 +185,6 @@ void Benchmark() {
 		//asyncTime.clear();
 
 		std::osyncstream(std::cout) << std::format("Avgs of {:d} trials of {:d} loops | single threaded time = {:.3f} | std::for_each time = {:.3f} \n", NTRIALS, NFUNC_CALLS, linearAvg, forEachAvg);
-		//std::osyncstream(std::cout) << std::format("Avgs of {:d} trials of {:d} loops | single threaded time = {:.3f} | std::async time = {:.3f} | std::for_each time = {:.3f} \n", NTRIALS, NFUNC_CALLS, linearAvg, asyncAvg, forEachAvg);
 	}
 
 	std::osyncstream(std::cout) << "Ending benchmark..." << "\n";
@@ -190,7 +195,6 @@ int main() {
 		Benchmark();
 	}
 	catch (const std::exception& e) {
-		//ThreadSafeCerr(e.what() + std::string("\n"));
 		std::osyncstream(std::cerr) << e.what() << "\n";
 	}
 

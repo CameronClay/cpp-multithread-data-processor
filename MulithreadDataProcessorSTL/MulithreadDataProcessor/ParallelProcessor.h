@@ -13,6 +13,7 @@
 #include <optional>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 //in C++ 17 constructors can deduce class template arguments
 template<typename Callable, typename Data>
@@ -23,14 +24,21 @@ public:
 	static constexpr int START_INDEX = 0;
 	static constexpr int EXIT_RESULT = INT_MIN;
 
-	ParallelProcessor(TaskPool& taskPool, Callable&& callable) requires std::invocable<Callable, std::size_t, Data&>
+	//cannot use Callable here because perfect forwarding requires a function template parameter
+	template<typename U>
+	ParallelProcessor(TaskPool& taskPool, U&& callable) requires std::invocable<Callable, std::size_t, Data&>
 		:
 		taskPool(taskPool),
-		callable(std::forward<Callable>(callable)),
+		callable(std::forward<U>(callable)),
 		processEv(),
 		finishedEv(0u),
 		processIncrement(0)
 	{}
+
+	ParallelProcessor(ParallelProcessor&&) = default;
+	ParallelProcessor& operator=(ParallelProcessor&&) = default;
+	ParallelProcessor(const ParallelProcessor&) = delete;
+	ParallelProcessor& operator=(const ParallelProcessor&) = delete;
 
 	~ParallelProcessor() {
 		AbortProcessing();
@@ -66,17 +74,17 @@ public:
 	}
 
 	//Returns true if processing is being aborted
-	bool IsAborting() const {
+	inline bool IsAborting() const {
 		return aborting.load(std::memory_order_acquire);
 	}
 
 	//Returns true if processing was started and is not finished.
-	bool InProgress() {
+	inline bool InProgress() {
 		return processEv.IsSet() && !finishedEv.IsSet();
 	}
 
 	//Returns true if not aborting and not in progress.
-	bool CanStartProcessing() {
+	inline bool CanStartProcessing() {
 		return !aborting.load(std::memory_order_acquire) && !InProgress();
 	}
 
@@ -104,22 +112,6 @@ protected:
 	TaskPool& taskPool;
 
 private:
-	//Returns a range of data to process [lowIndex, highIndex[ (returns None if finished processing)
-	std::optional<std::pair<int, int>> GetProcRange() {
-		//Compare and swap (CAS) loop
-		int newIndex;
-		int oldIndex = descriptor.index.load(std::memory_order_acquire);
-		do {
-			if (oldIndex == descriptor.count) {
-				return {};
-			}
-
-			newIndex = std::min(oldIndex + processIncrement, descriptor.count);
-		} while (!descriptor.index.compare_exchange_weak(oldIndex, newIndex, std::memory_order_acq_rel));
-
-		return std::optional{ std::make_pair(oldIndex, newIndex) };
-	}
-
 	void ResetEvents(std::size_t taskCount) {
 		finishedEv.Reset(taskCount);
 		processEv.Reset();
@@ -138,8 +130,7 @@ private:
 		auto f = [this](std::size_t threadIndex) {
 			this->ProcessData(threadIndex);
 		};
-		taskPool.QueueTask(Task{ f }, taskCount);
-		//taskPool.QueueTask(Task{ &ParallelProcessorBase::ProcessData, this }, taskCount);
+		taskPool.QueueTask(Task{ std::move(f) }, taskCount);
 		processEv.NotifyAll();
 	}
 
@@ -155,8 +146,27 @@ private:
 		finishedEv.NotifyAll();
 	}
 
+	//Returns a range of data to process [lowIndex, highIndex[ (returns None if finished processing)
+	//fine to inline because only called in one place
+	inline std::optional<std::pair<int, int>> GetProcRange() {
+		//Compare and swap (CAS) loop
+		int newIndex;
+		int oldIndex = descriptor.index.load(std::memory_order_acquire);
+		do {
+			if (oldIndex == descriptor.count) {
+				return {};
+			}
+
+			newIndex = std::min(oldIndex + processIncrement, descriptor.count);
+		} while (!descriptor.index.compare_exchange_weak(oldIndex, newIndex, std::memory_order_relaxed));
+
+		return std::optional{ std::make_pair(oldIndex, newIndex) };
+	}
+
+
 	//returns false when processing is complete and true otherwise
-	bool Process(std::size_t threadIndex) {
+	//fine to inline because only called in one place
+	inline bool Process(std::size_t threadIndex) {
 		if (IsAborting()) {
 			return false;
 		}
@@ -173,7 +183,8 @@ private:
 		return true;
 	}
 
-	void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) {
+	//fine to inline because only called in one place
+	inline void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) {
 		assert(endIndex <= descriptor.count);
 
 		//run algorithm within current thread in series
@@ -194,7 +205,9 @@ private:
 	EventMPSC finishedEv; //used to signal threads processing is complete (or object is being destroyed)
 };
 
+//C++ 17 template deduction guide needed both to deduce typeof Callable from the Universal Reference (perfect forwarding) of template argument U
+//... and also to deduce type of T from the passed Callable
 template <typename Callable>
-ParallelProcessor(TaskPool&, Callable) -> ParallelProcessor<Callable, std::remove_reference_t<ftraits::fextract_arg2<Callable>>>; // C++ 17 template deduction guide
+ParallelProcessor(TaskPool&, Callable callable) -> ParallelProcessor<std::remove_cvref_t<Callable>, std::remove_reference_t<ftraits::fextract_arg2<Callable>>>;
 
 #endif
