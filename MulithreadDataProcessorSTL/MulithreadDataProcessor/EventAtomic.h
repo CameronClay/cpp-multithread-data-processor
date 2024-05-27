@@ -50,10 +50,10 @@ public:
 	bool IsSet() const;
 	void Reset();
 
-	//preincrement operator
+	//predecrement operator
 	std::size_t operator--();
 
-	//predecrement operator
+	//preincrement operator
 	std::size_t operator++();
 
 	virtual void Wait();

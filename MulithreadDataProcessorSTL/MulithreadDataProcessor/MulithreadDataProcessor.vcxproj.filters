@@ -27,9 +27,6 @@
     <ClCompile Include="EventAtomic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TaskPoolJThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThreadPool.h">
@@ -60,12 +57,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EventAtomic.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TaskPoolJThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ThreadPoolJThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -29,11 +29,24 @@ public:
 		}
 	}
 
+	////threadIndex is passed to callable as last argument
+	//template<typename Callable, typename... Args> requires std::invocable<Callable, Args..., std::size_t>
+	//void CreateThreads(std::size_t threadCount, Callable callable, Args&&... args) {
+	//	auto f = [callable, ...args = std::forward<Args>(args)](std::stop_token stopToken, std::size_t threadIndex) {
+	//		std::invoke(callable, std::forward<Args>(args)..., std::forward<std::size_t>(threadIndex));
+	//	};
+
+	//	for (std::size_t i = 0u; i < threadCount; ++i) {
+	//		//threads.emplace_back(std::jthread(&ThreadPool::ThreadEntry<Callable, Args...>, this, callable, i, std::forward<Args>(args)...));
+	//		threads.emplace_back(std::jthread(f, i));
+	//	}
+	//}
+
 	//No need to call this automatically as threads are automatically joined when the ThreadPool is destroyed
 	void JoinAll() {
 		std::ranges::for_each(threads, [](ScopedThread& thread) {
 			thread.Join();
-			});
+		});
 	}
 
 	std::size_t ThreadCount() const {

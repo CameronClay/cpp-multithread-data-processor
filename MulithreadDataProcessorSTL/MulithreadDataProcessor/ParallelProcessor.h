@@ -2,8 +2,9 @@
 #define PARALLEL_PROCESSOR_H
 
 #include "EventAtomic.h"
-#include "TaskPoolJThread.h"
+#include "TaskPool.h"
 #include "PFunc.h"
+#include <cassert>
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
@@ -12,10 +13,10 @@
 #include <optional>
 
 template<typename RT, typename Data>
-using GlobalCallback = PFunc<RT, Data&, std::size_t>;
+using GlobalCallback = PFunc<RT, std::size_t, Data&>;
 
 template<typename RT, typename Data, typename C>
-using MemberCallback = PMFunc<RT, Data&, C&, std::size_t>;
+using MemberCallback = PMFunc<RT, std::size_t, Data&, C&>;
 
 template<typename Data>
 class ParallelProcessorBase
@@ -103,18 +104,6 @@ public:
 protected:
 	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) = 0;
 
-	void ProcessData(std::size_t threadIndex) {
-		processEv.Wait(); //Wait until data is available
-
-		while (true) {
-			if (!Process(threadIndex)) {
-				break;
-			}
-		}
-
-		finishedEv.NotifyAll();
-	}
-
 	DataDescriptor descriptor;
 	TaskPool& taskPool;
 
@@ -158,6 +147,18 @@ private:
 		processEv.NotifyAll();
 	}
 
+	void ProcessData(std::size_t threadIndex) {
+		processEv.Wait(); //Wait until data is available
+
+		while (true) {
+			if (!Process(threadIndex)) {
+				break;
+			}
+		}
+
+		finishedEv.NotifyAll();
+	}
+
 	//returns false when processing is complete and true otherwise
 	bool Process(std::size_t threadIndex) {
 		if (IsAborting()) {
@@ -189,6 +190,7 @@ class ParallelProcessor : public ParallelProcessorBase<Data>
 {
 public:
 	using CallBack_t = GlobalCallback<RT, Data>;
+	//using CallBack_t = Function<RT(std::size_t, Data&)>;
 	ParallelProcessor(TaskPool& taskPool, CallBack_t function)
 		:
 		ParallelProcessorBase<Data>(taskPool),
@@ -197,12 +199,14 @@ public:
 
 private:
 	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) override {
+		assert(endIndex <= ParallelProcessorBase<Data>::descriptor.count);
+
 		//run algorithm within current thread in series
 		for (Data* p = ParallelProcessorBase<Data>::descriptor.data + startIndex,
-			*end = ParallelProcessorBase<Data>::descriptor.data + std::min(endIndex, ParallelProcessorBase<Data>::descriptor.count);
+			*end = ParallelProcessorBase<Data>::descriptor.data + endIndex;
 			p != end; ++p)
 		{
-			function(*p, threadIndex);
+			function(threadIndex, *p);
 		}
 	}
 
@@ -223,9 +227,11 @@ public:
 
 private:
 	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) override {
+		assert(endIndex <= ParallelProcessorBase<Data>::descriptor.count);
+
 		//run algorithm within current thread in series
 		for (Data* p = ParallelProcessorBase<Data>::descriptor.data + startIndex + 1,
-			*end = ParallelProcessorBase<Data>::descriptor.data + std::min(endIndex, ParallelProcessorBase<Data>::descriptor.count);
+			*end = ParallelProcessorBase<Data>::descriptor.data + endIndex;
 			p != end; ++p)
 		{
 			function(*p, obj, threadIndex);

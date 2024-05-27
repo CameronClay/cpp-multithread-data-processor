@@ -10,7 +10,11 @@ TaskPool::~TaskPool() {
 }
 
 void TaskPool::CreateThreads(std::size_t threadCount) {
-	threads.CreateThreads(threadCount, Function<void(std::size_t)>(&TaskPool::DoTasks, this));
+	auto f = [this](std::size_t threadIndex) {
+		DoTasks(threadIndex);
+	};
+	threads.CreateThreads(threadCount, f);
+	//threads.CreateThreads(threadCount, Function<void(std::size_t)>(f));
 }
 
 void TaskPool::QueueTask(const Task& action, std::size_t count) {
