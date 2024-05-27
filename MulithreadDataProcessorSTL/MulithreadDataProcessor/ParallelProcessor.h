@@ -1,10 +1,9 @@
 #ifndef PARALLEL_PROCESSOR_H
 #define PARALLEL_PROCESSOR_H
 
-#include "ThreadPool.h"
 #include "EventAtomic.h"
+#include "TaskPoolJThread.h"
 #include "PFunc.h"
-#include "TaskPool.h"
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
@@ -151,7 +150,11 @@ private:
 	}
 
 	void StartTasks(std::size_t taskCount) {
-		taskPool.QueueTask(Task{ &ParallelProcessorBase::ProcessData, this }, taskCount);
+		auto f = [this](std::size_t threadIndex) {
+			this->ProcessData(threadIndex);
+		};
+		taskPool.QueueTask(Task{ f }, taskCount);
+	    //taskPool.QueueTask(Task{ &ParallelProcessorBase::ProcessData, this }, taskCount);
 		processEv.NotifyAll();
 	}
 

@@ -1,6 +1,5 @@
 #include "ParallelProcessor.h"
-#include "TaskPool.h"
-#include "iostreamUtils.h"
+#include "TaskPoolJThread.h"
 #include <iostream>
 #include <syncstream>
 #include <string>

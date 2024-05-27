@@ -24,24 +24,18 @@ public:
 	//Enqueues item and notifies condition variable a new item has been added to the queue (if was previously empty)
 	void Enqueue(const T& t) {
 		std::unique_lock<std::mutex> lock{ mutex };
-		const bool empty = queue.empty();
 		queue.push(t);
 
-		if (empty) {
-			cvQueue.notify_one();
-		}
+		cvQueue.notify_one();
 	}
 
 	//Enqueues item (constructs item in place) and notifies condition variable a new item has been added to the queue (if was previously empty)
 	template<typename... Args>
 	void Enqueue(Args&&... args) {
 		std::unique_lock<std::mutex> lock{ mutex };
-		const bool empty = queue.empty();
 		queue.emplace(std::forward<Args>(args)...);
 
-		if (empty) {
-			cvQueue.notify_one();
-		}
+		cvQueue.notify_one();
 	}
 
 	//Waits for item to become available to dequeue and then dequeue it
@@ -56,7 +50,7 @@ public:
 		}
 
 		if (queue.empty()) {
-			cvQueue.wait(lock, [this] {return !queue.empty() || interruptQueue; });
+			cvQueue.wait(lock, [this] { return !queue.empty() || interruptQueue; });
 		}
 
 		if (interruptQueue) {
@@ -74,7 +68,7 @@ public:
 		return std::optional<T>(t);
 	}
 
-	//Attemps to dequeue an item without waiting, returns true if an item was dequeued
+	//Attempts to dequeue an item without waiting, returns true if an item was dequeued
 	bool TryDequeue(T& t) {
 		std::unique_lock<std::mutex> lock{ mutex };
 		if (queue.empty()) {
@@ -104,6 +98,7 @@ public:
 		return queue.size();
 	}
 
+	//Interrupt all blocking Dequeue operations and cause them to return
 	void InterruptQueue() {
 		std::unique_lock<std::mutex> lock{ mutex };
 		interruptQueue = true;
