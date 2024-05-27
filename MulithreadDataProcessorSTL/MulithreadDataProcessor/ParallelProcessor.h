@@ -3,7 +3,7 @@
 
 #include "EventAtomic.h"
 #include "TaskPool.h"
-#include "PFunc.h"
+#include "FunctionTraits.h"
 #include <cassert>
 #include <atomic>
 #include <mutex>
@@ -11,30 +11,28 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <concepts>
+#include <type_traits>
 
-template<typename RT, typename Data>
-using GlobalCallback = PFunc<RT, std::size_t, Data&>;
-
-template<typename RT, typename Data, typename C>
-using MemberCallback = PMFunc<RT, std::size_t, Data&, C&>;
-
-template<typename Data>
-class ParallelProcessorBase
+//in C++ 17 constructors can deduce class template arguments
+template<typename Callable, typename Data>
+class ParallelProcessor
 {
 public:
 	static constexpr int INVALID_IDX = -1;
 	static constexpr int START_INDEX = 0;
 	static constexpr int EXIT_RESULT = INT_MIN;
 
-	ParallelProcessorBase(TaskPool& taskPool)
+	ParallelProcessor(TaskPool& taskPool, Callable&& callable) requires std::invocable<Callable, std::size_t, Data&>
 		:
 		taskPool(taskPool),
+		callable(std::forward<Callable>(callable)),
 		processEv(),
 		finishedEv(0u),
 		processIncrement(0)
 	{}
 
-	~ParallelProcessorBase() {
+	~ParallelProcessor() {
 		AbortProcessing();
 	}
 
@@ -102,8 +100,6 @@ public:
 		Data* data;
 	};
 protected:
-	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) = 0;
-
 	DataDescriptor descriptor;
 	TaskPool& taskPool;
 
@@ -143,7 +139,7 @@ private:
 			this->ProcessData(threadIndex);
 		};
 		taskPool.QueueTask(Task{ f }, taskCount);
-	    //taskPool.QueueTask(Task{ &ParallelProcessorBase::ProcessData, this }, taskCount);
+		//taskPool.QueueTask(Task{ &ParallelProcessorBase::ProcessData, this }, taskCount);
 		processEv.NotifyAll();
 	}
 
@@ -172,11 +168,24 @@ private:
 
 		const auto [startIndex, endIndex] = *indicies;
 
-		this->RunAlgorithm(threadIndex, startIndex, endIndex);
+		RunAlgorithm(threadIndex, startIndex, endIndex);
 
 		return true;
 	}
 
+	void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) {
+		assert(endIndex <= descriptor.count);
+
+		//run algorithm within current thread in series
+		for (Data* p = descriptor.data + startIndex,
+			*end = descriptor.data + endIndex;
+			p != end; ++p)
+		{
+			callable(std::forward<std::size_t>(threadIndex), *p);
+		}
+	}
+
+	Callable callable;
 	int processIncrement;
 	std::atomic<bool> aborting;
 	Event processEv; //used to notify threads data is available and processsing is ready to start
@@ -185,61 +194,7 @@ private:
 	EventMPSC finishedEv; //used to signal threads processing is complete (or object is being destroyed)
 };
 
-template<typename RT, typename Data>
-class ParallelProcessor : public ParallelProcessorBase<Data>
-{
-public:
-	using CallBack_t = GlobalCallback<RT, Data>;
-	//using CallBack_t = Function<RT(std::size_t, Data&)>;
-	ParallelProcessor(TaskPool& taskPool, CallBack_t function)
-		:
-		ParallelProcessorBase<Data>(taskPool),
-		function(function)
-	{}
-
-private:
-	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) override {
-		assert(endIndex <= ParallelProcessorBase<Data>::descriptor.count);
-
-		//run algorithm within current thread in series
-		for (Data* p = ParallelProcessorBase<Data>::descriptor.data + startIndex,
-			*end = ParallelProcessorBase<Data>::descriptor.data + endIndex;
-			p != end; ++p)
-		{
-			function(threadIndex, *p);
-		}
-	}
-
-	CallBack_t function;
-};
-
-template<typename RT, typename Data, typename C>
-class MParallelProcessor : public ParallelProcessorBase<Data>
-{
-public:
-	using CallBack_t = MemberCallback<RT, Data, C>;
-	MParallelProcessor(TaskPool& taskPool, CallBack_t function, C& obj)
-		:
-		ParallelProcessorBase<Data>(taskPool),
-		function(function),
-		obj(obj)
-	{}
-
-private:
-	virtual void RunAlgorithm(std::size_t threadIndex, int startIndex, int endIndex) override {
-		assert(endIndex <= ParallelProcessorBase<Data>::descriptor.count);
-
-		//run algorithm within current thread in series
-		for (Data* p = ParallelProcessorBase<Data>::descriptor.data + startIndex + 1,
-			*end = ParallelProcessorBase<Data>::descriptor.data + endIndex;
-			p != end; ++p)
-		{
-			function(*p, obj, threadIndex);
-		}
-	}
-
-	CallBack_t function;
-	C& obj;
-};
+template <typename Callable>
+ParallelProcessor(TaskPool&, Callable) -> ParallelProcessor<Callable, std::remove_reference_t<ftraits::fextract_arg2<Callable>>>; // C++ 17 template deduction guide
 
 #endif

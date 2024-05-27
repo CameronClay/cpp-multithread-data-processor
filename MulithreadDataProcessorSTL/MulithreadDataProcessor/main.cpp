@@ -14,6 +14,7 @@
 #include <thread>
 #include <future>
 #include <execution>
+#include <barrier>
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration;
@@ -59,6 +60,20 @@ double BenchLinear(std::vector<int>& data, std::size_t threadIndex) {
 	return GetBenchResult(t1); //measure performance
 }
 
+class A {
+public:
+	void Do(std::size_t threadIndex, int& i) const {
+		i = i * i * i;
+	}
+};
+
+class Functor {
+public:
+	void operator()(std::size_t threadIndex, int& i) {
+		i = i * i * i;
+	}
+};
+
 double BenchMultithreaded(std::vector<int>& data, std::size_t threadIndex) {
 	GenerateData(data);
 
@@ -67,7 +82,20 @@ double BenchMultithreaded(std::vector<int>& data, std::size_t threadIndex) {
 
 	auto t1 = high_resolution_clock::now();
 
-	ParallelProcessor<void, int> mp(taskPool, Cubed);
+	ParallelProcessor mp(taskPool, &Cubed);
+	 
+	//Functor functor;
+	//ParallelProcessor mp(taskPool, std::move(functor));
+	// 
+	//auto f = [&](std::size_t threadIndex, int& i) {
+	//	i *= 2;
+	//};	 
+	//ParallelProcessor mp(taskPool, std::move(f));
+
+	//ParallelProcessor mp(taskPool, std::function(Cubed));
+
+	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(&Cubed));
+
 	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (threadIndex * 10u), threadIndex);
 	//mp.AbortProcessing();
 	mp.WaitForCompetion();

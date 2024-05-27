@@ -9,13 +9,17 @@
 //Predeclaration of Function
 template<typename Sig> class Function;
 
-//------------------Function Concepts------------------
-template <typename Callable>
-concept IsMemFn = std::is_member_function_pointer_v<Callable>;
+namespace FunctionUtils {
+	//------------------Function Concepts------------------
+	template <typename Callable>
+	concept memfn = std::is_member_function_pointer_v<Callable>;
 
-template <typename Callable, typename... Args>
-concept IsInvokableMemFn = std::is_member_function_pointer_v<Callable> && std::is_invocable_v<Callable, Args...>;
-//-----------------------------------------------------
+	template <typename Callable, typename... Args>
+	concept invocable_memfn = std::is_member_function_pointer_v<Callable> && std::is_invocable_v<Callable, Args...>;
+
+	template<class T, class U>
+	concept not_same_as = !std::is_same_v<T, U>;
+}
 
 //Store function call with some arguments bound (including member functions)
 //Speeds up std::function by wrapper function pointer in lambda expression and binding arguments within a lambda expression where applicable
@@ -28,8 +32,8 @@ public:
 
 	//also serves as move and copy constructor via MakeFunc overloads
 	template<typename Callable, typename... BoundArgs>
-	Function(Callable func, BoundArgs&&... args) requires !std::is_same_v<Callable, Action>
-		: action(MakeFunc(func, std::forward<BoundArgs>(args)...))
+	Function(Callable&& callable, BoundArgs&&... args) requires FunctionUtils::not_same_as<Callable, Action>
+		: action(MakeFunc(std::forward<Callable>(callable), std::forward<BoundArgs>(args)...))
 	{}
 
 	Function() = default;
@@ -48,25 +52,25 @@ public:
 
 private:
 	template<typename Callable, typename... BoundArgs>
-	static Action MakeFunc(Callable func, BoundArgs&&... args) requires std::invocable<Callable, BoundArgs..., UnboundArgs...> {
-		return [func, ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(func, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, BoundArgs&&... args) requires std::invocable<Callable, BoundArgs..., UnboundArgs...> {
+		return [callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
+			return std::invoke(callable, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 			//return func(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 		};
 	}
 
 	template<typename Callable, typename O, typename... BoundArgs>
-	static Action MakeFunc(Callable func, O* o, BoundArgs&&... args) requires IsInvokableMemFn<Callable, BoundArgs..., UnboundArgs...> {
-		return [o, func, ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(func, *o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, O* o, BoundArgs&&... args) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
+		return [o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
+			return std::invoke(callable, *o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 			//return (o->*func)(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 		};
 	}
 
 	template<typename Callable, typename O, typename... BoundArgs>
-	static Action MakeFunc(Callable func, O& o, BoundArgs&&... args) requires IsInvokableMemFn<Callable, BoundArgs..., UnboundArgs...> {
-		return [&o, func, ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(func, o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, O& o, BoundArgs&&... args) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
+		return [&o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
+			return std::invoke(callable, o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 			//return (o.*func)(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
 		};
 	}

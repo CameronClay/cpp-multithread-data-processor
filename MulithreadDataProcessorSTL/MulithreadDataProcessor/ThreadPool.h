@@ -16,10 +16,10 @@ class ThreadPool
 public:
 	ThreadPool() = default;
 
-	//threadIndex is passed to callable as first argument
+	//threadIndex is passed to callable as first argumentS
 	template<typename Callable, typename... Args> requires std::invocable<Callable, std::size_t, Args...>
-	void CreateThreads(std::size_t threadCount, Callable callable, Args&&... args) {
-		auto f = [callable, ...args = std::forward<Args>(args)](std::size_t threadIndex) {
+	void CreateThreads(std::size_t threadCount, Callable&& callable, Args&&... args) {
+		auto f = [callable = std::forward<Callable>(callable), ...args = std::forward<Args>(args)](std::size_t threadIndex) {
 			std::invoke(callable, std::forward<std::size_t>(threadIndex), std::forward<Args>(args)...);
 		};
 

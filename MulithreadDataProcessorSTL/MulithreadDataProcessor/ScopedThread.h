@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <exception>
+#include <stdexcept>
 
 //could also use std::jthread (C++ 20) in place of this
 class ScopedThread
