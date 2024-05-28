@@ -46,32 +46,34 @@ public:
 		return bool(action);
 	}
 
-	decltype(auto) operator()(UnboundArgs&&... args) const {
+	//meed this separate variadic template for perfect forwarding (because perfect forwarding requires a function template parameter)
+	template<typename... UBArgs>
+	decltype(auto) operator()(UBArgs&&... args) const {
 		return action(std::forward<UnboundArgs>(args)...);
 	}
 
 private:
 	template<typename Callable, typename... BoundArgs>
-	static Action MakeFunc(Callable&& callable, BoundArgs&&... args) requires std::invocable<Callable, BoundArgs..., UnboundArgs...> {
-		return [callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(callable, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
-			//return func(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, BoundArgs&&... boundArgs) requires std::invocable<Callable, BoundArgs..., UnboundArgs...> {
+		return [callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(boundArgs)](auto&&... unboundArgs) mutable -> decltype(auto) {
+			return std::invoke(callable, std::forward<decltype(args)>(args)..., std::forward<decltype(unboundArgs)>(unboundArgs)...);
+			//return func(std::forward<decltype(args)>(boundArgs)..., std::forward<UnboundArgs>(unboundArgs)...);
 		};
 	}
 
 	template<typename Callable, typename O, typename... BoundArgs>
-	static Action MakeFunc(Callable&& callable, O* o, BoundArgs&&... args) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
-		return [o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(callable, *o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
-			//return (o->*func)(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, O* o, BoundArgs&&... boundArgs) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
+		return [o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(boundArgs)](auto&&... unboundArgs) mutable -> decltype(auto) {
+			return std::invoke(callable, *o, std::forward<decltype(args)>(args)..., std::forward<decltype(unboundArgs)>(unboundArgs)...);
+			//return (o->*func)(std::forward<decltype(args)>(boundArgs)..., std::forward<UnboundArgs>(unboundArgs)...);
 		};
 	}
 
 	template<typename Callable, typename O, typename... BoundArgs>
-	static Action MakeFunc(Callable&& callable, O& o, BoundArgs&&... args) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
-		return [&o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(args)](UnboundArgs&&... rest) mutable -> decltype(auto) {
-			return std::invoke(callable, o, std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
-			//return (o.*func)(std::forward<decltype(args)>(args)..., std::forward<UnboundArgs>(rest)...);
+	static Action MakeFunc(Callable&& callable, O& o, BoundArgs&&... boundArgs) requires FunctionUtils::invocable_memfn<Callable, BoundArgs..., UnboundArgs...> {
+		return [&o, callable = std::forward<Callable>(callable), ...args = std::forward<BoundArgs>(boundArgs)](auto&&... unboundArgs) mutable -> decltype(auto) {
+			return std::invoke(callable, o, std::forward<decltype(args)>(args)..., std::forward<decltype(unboundArgs)>(unboundArgs)...);
+			//return (o.*func)(std::forward<decltype(args)>(boundArgs)..., std::forward<UnboundArgs>(unboundArgs)...);
 		};
 	}
 

@@ -192,7 +192,7 @@ private:
 			*end = descriptor.data + endIndex;
 			p != end; ++p)
 		{
-			callable(std::forward<std::size_t>(threadIndex), *p);
+			callable(threadIndex, *p);
 		}
 	}
 

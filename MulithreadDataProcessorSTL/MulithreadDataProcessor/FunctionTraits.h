@@ -18,6 +18,13 @@ namespace ftraits {
 		using arg2 = typename fextract_args<call_op_t<Callable>>::arg2;
 	};
 
+	//template with signature of functor (needed for Function and std::function)
+	template<template<typename> typename Functor, typename R, typename Arg1, typename Arg2>
+	struct fextract_args<Functor<R(Arg1, Arg2)>> {
+		using arg1 = Arg1;
+		using arg2 = Arg2;
+	};
+
 	//function pointer specialization
 	template<typename R, typename Arg1, typename Arg2>
 	struct fextract_args<R(*)(Arg1, Arg2)> {

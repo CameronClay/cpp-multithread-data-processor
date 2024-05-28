@@ -100,7 +100,7 @@ double BenchMultithreaded(std::vector<int>& data, std::size_t threadIndex) {
 
 	//ParallelProcessor mp(taskPool, std::function(CubedLambda));
 
-	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(CubedLambda));
+	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(&Cubed));
 
 	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (threadIndex * 10u), threadIndex);
 	//mp.AbortProcessing();

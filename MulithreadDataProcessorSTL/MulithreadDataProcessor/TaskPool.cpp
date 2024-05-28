@@ -32,7 +32,7 @@ void TaskPool::DoTasks(std::size_t threadIndex) {
 	while (!exit.load(std::memory_order_acquire)) {
 		const auto task = tasks.Dequeue();
 		if (task) {
-			(*task)(std::forward<std::size_t>(threadIndex)); //execute task
+			(*task)(threadIndex); //execute task
 		}
 	}
 }
