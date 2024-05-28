@@ -1,22 +1,21 @@
-#ifndef PARALLEL_PROCESSOR_H
-#define PARALLEL_PROCESSOR_H
+export module ParallelProcessor;
 
-#include "EventAtomic.h"
-#include "TaskPool.h"
-#include "FunctionTraits.h"
-#include <cassert>
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <algorithm>
-#include <limits>
-#include <optional>
-#include <concepts>
-#include <type_traits>
-#include <utility>
+import <cassert>;
+import <atomic>;
+import <mutex>;
+import <condition_variable>;
+import <algorithm>;
+import <limits>;
+import <optional>;
+import <concepts>;
+import <type_traits>;
+import <utility>;
+import EventAtomic;
+import TaskPool;
+import FunctionTraits;
 
 //in C++ 17 constructors can deduce class template arguments
-template<typename Callable, typename Data>
+export template<typename Callable, typename Data>
 class ParallelProcessor
 {
 public:
@@ -26,7 +25,7 @@ public:
 
 	//cannot use Callable here because perfect forwarding requires a function template parameter
 	template<typename U>
-	ParallelProcessor(TaskPool& taskPool, U&& callable) requires std::invocable<Callable, std::size_t, Data&>
+	ParallelProcessor(TaskPool& taskPool, U&& callable) requires std::invocable<U, std::size_t, Data&>
 		:
 		taskPool(taskPool),
 		callable(std::forward<U>(callable)),
@@ -207,7 +206,5 @@ private:
 
 //C++ 17 template deduction guide needed both to deduce typeof Callable from the Universal Reference (perfect forwarding) of template argument U
 //... and also to deduce type of T from the passed Callable
-template <typename Callable>
+export template <typename Callable>
 ParallelProcessor(TaskPool&, Callable callable) -> ParallelProcessor<std::remove_cvref_t<Callable>, std::remove_reference_t<ftraits::fextract_arg2<Callable>>>;
-
-#endif

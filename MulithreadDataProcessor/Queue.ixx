@@ -1,14 +1,13 @@
-#ifndef QUEUE_H
-#define QUEUE_H
+export module Queue;
 
-#include <mutex>
-#include <condition_variable>
-#include <queue>
-#include <optional>
-#include <atomic>
-#include "EventAtomic.h"
+import <mutex>;
+import <condition_variable>;
+import <queue>;
+import <optional>;
+import <atomic>;
+import EventAtomic;
 
-template<typename T>
+export template<typename T>
 class Queue
 {
 public:
@@ -114,7 +113,7 @@ private:
 };
 
 //Thread safe Queue that notifies threads
-//template<typename T>
+//export template<typename T>
 //class Queue
 //{
 //public:
@@ -246,5 +245,3 @@ private:
 //	std::atomic<std::size_t> dequeuesIP; 
 //	std::atomic<bool> dequeuesFinished; //C++ 20 atomic<T>::wait_for similar to condition variables but more performant in general where applicable
 //};
-
-#endif

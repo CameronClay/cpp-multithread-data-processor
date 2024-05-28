@@ -1,0 +1,9 @@
+{
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": {
+            "value": "C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "type": "FILEPATH"
+        },
+        // "VCPKG_TARGET_TRIPLET": "x64-windows", //seems to cause conflicts between x64 and x86 versions of vcpkg libaries for some reason
+    }
+}

@@ -1,17 +1,16 @@
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+export module ThreadPool;
 
-#include <thread>
-#include <memory>
-#include <utility>
-#include "EventAtomic.h"
-#include "ScopedThread.h"
-#include <concepts>
-#include <vector>
-#include <algorithm>
-#include <memory>
+import <thread>;
+import <memory>;
+import <utility>;
+import <concepts>;
+import <vector>;
+import <algorithm>;
+import <memory>;
+import EventAtomic;
+import ScopedThread;
 
-class ThreadPool
+export class ThreadPool
 {
 public:
 	ThreadPool() = default;
@@ -54,5 +53,3 @@ private:
 	//could also use new std::jthread (C++ 20) instead of ScopedThread
 	std::vector<ScopedThread> threads;
 };
-
-#endif

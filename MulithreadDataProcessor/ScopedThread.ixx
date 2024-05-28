@@ -1,12 +1,11 @@
-#ifndef SCOPED_THREAD_H
-#define SCOPED_THREAD_H
+export module ScopedThread;
 
-#include <thread>
-#include <exception>
-#include <stdexcept>
+import <thread>;
+import <exception>;
+import <stdexcept>;
 
 //could also use std::jthread (C++ 20) in place of this
-class ScopedThread
+export class ScopedThread
 {
 public:
     explicit ScopedThread(std::thread&& _t) 
@@ -33,5 +32,3 @@ public:
 private:
     std::thread t;
 };
-
-#endif

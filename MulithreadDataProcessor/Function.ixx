@@ -1,13 +1,12 @@
-#ifndef FUNCTION_H
-#define FUNCTION_H
+export module Function;
 
-#include <stdlib.h>
-#include <functional>
-#include <concepts>
-#include <type_traits>
+import <cstdlib>;
+import <functional>;
+import <concepts>;
+import <type_traits>;
 
 //Predeclaration of Function
-template<typename Sig> class Function;
+export template<typename Sig> class Function;
 
 namespace FunctionUtils {
 	//------------------Function Concepts------------------
@@ -24,7 +23,7 @@ namespace FunctionUtils {
 //Store function call with some arguments bound (including member functions)
 //Speeds up std::function by wrapper function pointer in lambda expression and binding arguments within a lambda expression where applicable
 //Eliminates need for std::bind (which is also quite slow on some platforms)
-template<typename RT, typename... UnboundArgs>
+export template<typename RT, typename... UnboundArgs>
 class Function<RT(UnboundArgs...)>
 {
 public:
@@ -79,5 +78,3 @@ private:
 
 	Action action;
 };
-
-#endif

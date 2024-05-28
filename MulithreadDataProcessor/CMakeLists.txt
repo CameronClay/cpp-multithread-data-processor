@@ -1,0 +1,11 @@
+add_executable(${PROJECT_NAME}
+    main.ixx
+    ThreadPool.ixx
+    Queue.ixx
+    EventAtomic.ixx
+    Function.ixx
+    FunctionTraits.ixx
+    TaskPool.ixx
+    ParallelProcessor.ixx
+    ScopedThread.ixx
+)

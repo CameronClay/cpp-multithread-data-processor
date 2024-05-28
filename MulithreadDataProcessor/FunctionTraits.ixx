@@ -1,9 +1,8 @@
-#ifndef FUNCTION_TRAITS_H
-#define FUNCTION_TRAITS_H
+export module FunctionTraits;
 
-#include <cstddef>
+import <cstddef>;
 
-namespace ftraits {
+export namespace ftraits {
 	template<typename Callable>
 	using call_op_t = decltype(&Callable::operator());
 
@@ -114,5 +113,3 @@ namespace ftraits {
 	//template<typename Callable>
 	//using ExtractArgument_t = typename ExtractArgument<Callable>::type;
 }
-
-#endif
