@@ -9,7 +9,7 @@ Multiple execution methods including sequential, parallel, std::for_each, std::a
 - The main program also performs basic systems testing inbetween the benchmarking
 
 ### Tooling
-- C++ 20 (with C++ 20 modules)
+- C++ 20 (with **C++ 20 modules**)
 - Google Test
 - CMake
 - vcpkg
