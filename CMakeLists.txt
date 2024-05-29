@@ -8,4 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-add_subdirectory(MulithreadDataProcessor)
+add_subdirectory(lib)
+add_subdirectory(bench_utils)
+add_subdirectory(data_processor)
+add_subdirectory(tests)

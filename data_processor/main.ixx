@@ -13,6 +13,7 @@ import <thread>;
 import <future>;
 import <execution>;
 import <stdexcept>;
+import BenchUtils;
 import ParallelProcessor;
 import TaskPool;
 
@@ -24,68 +25,27 @@ const std::size_t NFUNC_CALLS = 4000000;
 const std::size_t NTRIALS = 100;
 const std::size_t THREAD_COUNT_MAX = std::thread::hardware_concurrency();
 
-void Cubed(std::size_t threadIndex, int& data) {
-	data = (data * data * data);
-}
-
-//use lambda to test performance to make benchmarks more fair (need a lambda for algorithms library)
-auto CubedLambda = [](std::size_t threadIndex, int& data) {
-	Cubed(threadIndex, data);
-};
-
-class A {
-public:
-	void Do(std::size_t threadIndex, int& i) const {
-		i = i * i * i;
-	}
-};
-
-class Functor {
-public:
-	void operator()(std::size_t threadIndex, int& i) {
-		i = i * i * i;
-	}
-};
-
-double GetBenchResult(const high_resolution_clock::time_point& t1) {
-	return duration<double, std::milli>(high_resolution_clock::now() - t1).count();
-}
-
-double AvgBenchResults(const std::vector<double>& results) {
-	if (results.empty()) {
-		return 0.0;
-	}
-
-	const double sum = std::reduce(std::cbegin(results), std::cend(results), 0.0);
-	const double avg = sum / results.size();
-	return avg;
-}
-
-void GenerateData(std::vector<int>& data) {
-	std::generate(std::begin(data), std::end(data), [n = 0]() mutable { return n++; }); //reset vector to a list of indices to use as data
-}
-
 double BenchLinear(std::size_t trialIndex, std::vector<int>& data, std::size_t threadIndex) {
-	GenerateData(data);
+	BenchUtils::GenerateData(data);
 
 	const auto t1 = high_resolution_clock::now();
 
 	for (std::size_t i = 0u; i < NFUNC_CALLS; ++i) {
-		CubedLambda(threadIndex, data[i]);
+		BenchUtils::CubedLambda(threadIndex, data[i]);
 	}
 
-	return GetBenchResult(t1); //measure performance
+	return BenchUtils::GetBenchResult(t1); //measure performance
 }
 
 double BenchMultithreaded(std::size_t trialIndex, std::vector<int>& data, std::size_t threadIndex) {
-	GenerateData(data);
+	BenchUtils::GenerateData(data);
 
 	TaskPool taskPool;
 	taskPool.CreateThreads(threadIndex);
 
 	const auto t1 = high_resolution_clock::now();
 
-	ParallelProcessor mp(taskPool, CubedLambda);
+	ParallelProcessor mp(taskPool, BenchUtils::CubedLambda);
 	//ParallelProcessor mp(taskPool, static_cast<decltype(CubedLambda)>(CubedLambda)); //static_cast converts lvalue to rvalue (not ncessary with perfect forwarding)
 	//ParallelProcessor mp(taskPool, static_cast<void(*)(std::size_t, int&)>(CubedLambda));
 	//ParallelProcessor mp(taskPool, &Cubed);
@@ -106,43 +66,37 @@ double BenchMultithreaded(std::size_t trialIndex, std::vector<int>& data, std::s
 	//mp.AbortProcessing();
 	mp.WaitForCompetion();
 
-	return GetBenchResult(t1);
+	return BenchUtils::GetBenchResult(t1);
 }
 
 double BenchForEach(std::size_t trialIndex, std::vector<int>& data, std::size_t threadIndex) {
-	GenerateData(data);
+	BenchUtils::GenerateData(data);
 
 	const auto t1 = high_resolution_clock::now();
 
 	std::for_each(std::execution::par, std::begin(data), std::end(data), [](auto& data) { // passing lambda directly provides massive speed improvement (probably because Cubed is getting inlined)
-		CubedLambda(0u, data);
+		BenchUtils::CubedLambda(0u, data);
 	});
 
-	return GetBenchResult(t1); //measure performance
+	return BenchUtils::GetBenchResult(t1); //measure performance
 }
 
 //this is incredibly slow because it launches a new task NFUNC_CALLS times
 double BenchAsync(std::size_t trialIndex, std::vector<int>& data, std::size_t threadIndex) {
-	GenerateData(data);
+	BenchUtils::GenerateData(data);
 
 	const auto t1 = high_resolution_clock::now();
 
 	std::vector<std::future<void>> handles(NFUNC_CALLS);
 	std::transform(std::begin(data), std::end(data), std::begin(handles), [](auto& num) {
 		return std::async(std::launch::async,
-			CubedLambda, 0u, std::ref(num));
+			BenchUtils::CubedLambda, 0u, std::ref(num));
 	});
 	std::for_each(std::begin(handles), std::end(handles), [](auto& handle) {
 		handle.get();
 	});
 
-	return GetBenchResult(t1); //measure performance
-}
-
-void ValidateEqual(const std::vector<int>& data, const std::vector<int>& toCompare) {
-	if (!std::ranges::equal(data, toCompare)) {
-		throw std::logic_error("Alogorithm did not process correctly (data and toCompare not equal)...");
-	}
+	return BenchUtils::GetBenchResult(t1); //measure performance
 }
 
 void HoldConsoleOpen() {
@@ -166,12 +120,12 @@ void Benchmark() {
 		for (std::size_t trialIndex = 0u; trialIndex < NTRIALS; ++trialIndex) {
 			linearTime.push_back(BenchLinear(trialIndex, dataToCompare, 0u));
 			forEachTime.push_back(BenchForEach(trialIndex, data, 0u));
-			ValidateEqual(data, dataToCompare); //validate all data was processed correctly (systems test)
+			BenchUtils::ValidateData(data, dataToCompare); //validate all data was processed correctly (systems test)
 			//asyncTime.push_back(BenchAsync(data, 0u));
 		}
 
-		const double linearAvg = AvgBenchResults(linearTime);
-		const double forEachAvg = AvgBenchResults(forEachTime);
+		const double linearAvg = BenchUtils::AvgBenchResults(linearTime);
+		const double forEachAvg =BenchUtils:: AvgBenchResults(forEachTime);
 		//const double asyncAvg = AvgBenchResults(asyncTime);
 
 		linearTime.clear();
@@ -186,10 +140,10 @@ void Benchmark() {
 	for (std::size_t threadIndex = 1u; threadIndex <= THREAD_COUNT_MAX; ++threadIndex) {
 		for (std::size_t trialIndex = 0u; trialIndex < NTRIALS; ++trialIndex) {
 			multiTime.push_back(BenchMultithreaded(trialIndex, data, threadIndex));
-			ValidateEqual(data, dataToCompare); //validate all data was processed correctly (systems test)
+			BenchUtils::ValidateData(data, dataToCompare); //validate all data was processed correctly (systems test)
 		}
 
-		const double multiAvg = AvgBenchResults(multiTime);
+		const double multiAvg = BenchUtils::AvgBenchResults(multiTime);
 
 		multiTime.clear();
 

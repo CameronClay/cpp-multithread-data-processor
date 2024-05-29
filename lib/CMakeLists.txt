@@ -1,5 +1,4 @@
-add_executable(${PROJECT_NAME}
-    main.ixx
+add_library(lib STATIC
     ThreadPool.ixx
     Queue.ixx
     EventAtomic.ixx

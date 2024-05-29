@@ -1,0 +1,8 @@
+{
+    "name": "muiltithread-data-processor",
+    "version": "0.0.1",
+    "dependencies": [
+      "gtest"
+    ]
+}
+  
