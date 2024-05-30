@@ -66,9 +66,9 @@ protected:
 
 TEST_F(ParallelProcessorTest, With_Lambda)
 {
-	ParallelProcessor mp(taskPool, BenchUtils::CubedLambda);
+	ParallelProcessor mp(taskPool, BenchUtils::CubedLambda, std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -77,9 +77,9 @@ TEST_F(ParallelProcessorTest, With_Lambda)
 
 TEST_F(ParallelProcessorTest, With_LambdaFunctionPointer)
 {
-	ParallelProcessor mp(taskPool, static_cast<void(*)(std::size_t, int&)>(BenchUtils::CubedLambda));
+	ParallelProcessor mp(taskPool, static_cast<void(*)(std::size_t, int&)>(BenchUtils::CubedLambda), std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -91,9 +91,9 @@ TEST_F(ParallelProcessorTest, With_MovedLambda)
         BenchUtils::CubedLambda(threadIndex, i);
     };
 
-	ParallelProcessor mp(taskPool, std::move(f));
+	ParallelProcessor mp(taskPool, std::move(f), std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -102,9 +102,9 @@ TEST_F(ParallelProcessorTest, With_MovedLambda)
 TEST_F(ParallelProcessorTest, With_Functor)
 {
     BenchUtils::Functor functor;
-	ParallelProcessor mp(taskPool, functor);
+	ParallelProcessor mp(taskPool, functor, std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -113,9 +113,9 @@ TEST_F(ParallelProcessorTest, With_Functor)
 TEST_F(ParallelProcessorTest, With_MovedFunctor)
 {
     BenchUtils::Functor functor;
-	ParallelProcessor mp(taskPool, std::move(functor));
+	ParallelProcessor mp(taskPool, std::move(functor), std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -124,9 +124,9 @@ TEST_F(ParallelProcessorTest, With_MovedFunctor)
 TEST_F(ParallelProcessorTest, With_std_function)
 {
     auto f = std::function(BenchUtils::CubedLambda);
-	ParallelProcessor mp(taskPool, f);
+	ParallelProcessor mp(taskPool, f, std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -134,9 +134,9 @@ TEST_F(ParallelProcessorTest, With_std_function)
 
 TEST_F(ParallelProcessorTest, With_Moved_std_function)
 {
-	ParallelProcessor mp(taskPool, std::function(BenchUtils::CubedLambda));
+	ParallelProcessor mp(taskPool, std::function(BenchUtils::CubedLambda), std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -145,9 +145,9 @@ TEST_F(ParallelProcessorTest, With_Moved_std_function)
 TEST_F(ParallelProcessorTest, With_Function)
 {
     auto f = Function<void(std::size_t, int&)>(BenchUtils::CubedLambda);
-	ParallelProcessor mp(taskPool, f);
+	ParallelProcessor mp(taskPool, f, std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -155,9 +155,9 @@ TEST_F(ParallelProcessorTest, With_Function)
 
 TEST_F(ParallelProcessorTest, With_Moved_Function)
 {
-	ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(BenchUtils::CubedLambda));
+	ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(BenchUtils::CubedLambda), std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());
@@ -165,9 +165,9 @@ TEST_F(ParallelProcessorTest, With_Moved_Function)
 
 TEST_F(ParallelProcessorTest, With_Function_Pointer)
 {
-	ParallelProcessor mp(taskPool, &BenchUtils::Cubed);
+	ParallelProcessor mp(taskPool, &BenchUtils::Cubed, std::begin(data), std::end(data));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
+	mp.StartProcessing(NFUNC_CALLS / (THREAD_COUNT_MAX * 10u), THREAD_COUNT_MAX);
 	mp.WaitForCompetion();
 
     ASSERT_TRUE(ValidateData());

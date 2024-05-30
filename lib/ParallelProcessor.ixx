@@ -10,12 +10,13 @@ import <optional>;
 import <concepts>;
 import <type_traits>;
 import <utility>;
+import <iterator>;
 import EventAtomic;
 import TaskPool;
 import FunctionTraits;
 
 //in C++ 17 constructors can deduce class template arguments
-export template<typename Callable, typename Data>
+export template<typename Callable, typename IOIterator>
 class ParallelProcessor
 {
 public:
@@ -23,15 +24,22 @@ public:
 	static constexpr int START_INDEX = 0;
 	static constexpr int EXIT_RESULT = INT_MIN;
 
-	//cannot use Callable here because perfect forwarding requires a function template parameter
+    //Parameters:
+	//- taskPool: Task pool to use
+	//- callable: Function to call (callable(std::size_t threadIndex, std::iter_reference_t<IOIterator> data))
+	//- first: mutable random-access iterator to the first element
+	//- last: mutable random-access iterator to the last element
+	//- cannot use Callable here because perfect forwarding requires a function template parameter
+	//requires std::invocable<U, std::size_t, std::add_lvalue_reference_t<std::invoke_result_t<IOIterator::operator*>>> && std::random_access_iterator<IOIterator>
 	template<typename U>
-	ParallelProcessor(TaskPool& taskPool, U&& callable) requires std::invocable<U, std::size_t, Data&>
+	ParallelProcessor(TaskPool& taskPool, U&& callable, IOIterator first, IOIterator last) requires std::invocable<U, std::size_t, std::iter_reference_t<IOIterator>> && std::random_access_iterator<IOIterator>
 		:
 		taskPool(taskPool),
 		callable(std::forward<U>(callable)),
 		processEv(),
 		finishedEv(0u),
-		processIncrement(0)
+		processIncrement(0),
+		descriptor(first, last)
 	{}
 
 	ParallelProcessor(ParallelProcessor&&) = default;
@@ -44,9 +52,9 @@ public:
 	}
 
 	//Returns true if processing was not in progress and started successfully
-	bool StartProcessing(Data* data, int dataCount, int processIncrement, std::size_t taskCount) {
+	bool StartProcessing(int processIncrement, std::size_t taskCount) {
 		if (CanStartProcessing()) {
-			InitializeData(data, dataCount, processIncrement, taskCount);
+			InitializeData(processIncrement, taskCount);
 			StartTasks(taskCount);
 
 			return true;
@@ -95,16 +103,25 @@ public:
 
 	struct DataDescriptor
 	{
-		DataDescriptor()
+		DataDescriptor(IOIterator first, IOIterator last)
 			:
 			index(START_INDEX),
-			count(0),
-			data(0)
+			count(last - first),
+			first(first),
+			last(last)
 		{}
+
+		IOIterator begin() {
+			return first;
+		}
+
+		IOIterator end() {
+			return last;
+		}
 
 		std::atomic<int> index;
 		int count; //Entry count in data
-		Data* data;
+		IOIterator first, last;
 	};
 protected:
 	DataDescriptor descriptor;
@@ -116,13 +133,11 @@ private:
 		processEv.Reset();
 	}
 
-	void InitializeData(Data* data, int dataCount, int processIncrement, std::size_t taskCount) {
+	void InitializeData(int processIncrement, std::size_t taskCount) {
 		ResetEvents(taskCount);
 
 		this->processIncrement = processIncrement;
 		descriptor.index = 0;
-		descriptor.count = dataCount;
-		descriptor.data = data;
 	}
 
 	void StartTasks(std::size_t taskCount) {
@@ -187,11 +202,11 @@ private:
 		assert(endIndex <= descriptor.count);
 
 		//run algorithm within current thread in series
-		for (Data* p = descriptor.data + startIndex,
-			*end = descriptor.data + endIndex;
-			p != end; ++p)
+		for (auto it = std::begin(descriptor) + startIndex,
+			end = std::begin(descriptor)  + endIndex;
+			it != end; ++it)
 		{
-			callable(threadIndex, *p);
+			callable(threadIndex, *it);
 		}
 	}
 
@@ -206,5 +221,8 @@ private:
 
 //C++ 17 template deduction guide needed both to deduce typeof Callable from the Universal Reference (perfect forwarding) of template argument U
 //... and also to deduce type of T from the passed Callable
-export template <typename Callable>
-ParallelProcessor(TaskPool&, Callable callable) -> ParallelProcessor<std::remove_cvref_t<Callable>, std::remove_reference_t<ftraits::fextract_arg2<Callable>>>;
+export template<typename U, typename IOIterator>
+ParallelProcessor(TaskPool&, U&&, IOIterator, IOIterator) -> ParallelProcessor<std::remove_cvref_t<U>, IOIterator>;
+
+// export template <typename U>
+// ParallelProcessor(TaskPool&, U callable) -> ParallelProcessor<std::remove_cvref_t<U>, std::remove_reference_t<ftraits::fextract_arg2<U>>>;

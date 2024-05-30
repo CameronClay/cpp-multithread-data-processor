@@ -45,7 +45,7 @@ double BenchMultithreaded(std::size_t trialIndex, std::vector<int>& data, std::s
 
 	const auto t1 = high_resolution_clock::now();
 
-	ParallelProcessor mp(taskPool, BenchUtils::CubedLambda);
+	ParallelProcessor mp(taskPool, BenchUtils::CubedLambda, std::begin(data), std::end(data));
 	//ParallelProcessor mp(taskPool, static_cast<decltype(CubedLambda)>(CubedLambda)); //static_cast converts lvalue to rvalue (not ncessary with perfect forwarding)
 	//ParallelProcessor mp(taskPool, static_cast<void(*)(std::size_t, int&)>(CubedLambda));
 	//ParallelProcessor mp(taskPool, &Cubed);
@@ -62,7 +62,7 @@ double BenchMultithreaded(std::size_t trialIndex, std::vector<int>& data, std::s
 
 	//ParallelProcessor mp(taskPool, Function<void(std::size_t, int&)>(&Cubed));
 
-	mp.StartProcessing(data.data(), NFUNC_CALLS, NFUNC_CALLS / (threadIndex * 10u), threadIndex);
+	mp.StartProcessing(NFUNC_CALLS / (threadIndex * 10u), threadIndex);
 	//mp.AbortProcessing();
 	mp.WaitForCompetion();
 
