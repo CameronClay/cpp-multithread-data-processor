@@ -10,4 +10,4 @@ Multiple execution methods including sequential, parallel, std::for_each, std::a
 ### Tooling
 - C++ 20
 - Google Test
-- Visual Studio
+- Visual Studio Code and Visual Studio
