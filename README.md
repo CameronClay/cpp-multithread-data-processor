@@ -13,6 +13,7 @@ Multiple execution methods including sequential, parallel, std::for_each, std::a
 - Google Test
 - CMake
 - vcpkg
+- msvc compiler
 - Visual Studio Code
 - Visual Studio
 
