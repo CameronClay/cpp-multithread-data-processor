@@ -32,7 +32,7 @@ public:
 	//- cannot use Callable here because perfect forwarding requires a function template parameter
 	//requires std::invocable<U, std::size_t, std::add_lvalue_reference_t<std::invoke_result_t<IOIterator::operator*>>> && std::random_access_iterator<IOIterator>
 	template<typename U>
-	ParallelProcessor(TaskPool& taskPool, U&& callable, IOIterator first, IOIterator last) requires std::invocable<U, std::size_t, std::iter_reference_t<IOIterator>> && std::random_access_iterator<IOIterator>
+	explicit ParallelProcessor(TaskPool& taskPool, U&& callable, IOIterator first, IOIterator last) requires std::invocable<U, std::size_t, std::iter_reference_t<IOIterator>> && std::random_access_iterator<IOIterator>
 		:
 		taskPool(taskPool),
 		callable(std::forward<U>(callable)),
