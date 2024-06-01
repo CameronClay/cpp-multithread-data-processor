@@ -23,14 +23,14 @@ namespace FunctionUtils {
 //Store function call with some arguments bound (including member functions)
 //Speeds up std::function by wrapper function pointer in lambda expression and binding arguments within a lambda expression where applicable
 //Eliminates need for std::bind (which is also quite slow on some platforms)
-export template<typename RT, typename... UnboundArgs>
+template<typename RT, typename... UnboundArgs>
 class Function<RT(UnboundArgs...)>
 {
 public:
 	using Action = std::function<RT(UnboundArgs...)>;
 
 	template<typename Callable, typename... BoundArgs>
-	Function(Callable&& callable, BoundArgs&&... args) requires std::invocable<Callable, BoundArgs..., UnboundArgs...>
+	explicit Function(Callable&& callable, BoundArgs&&... args) requires std::invocable<Callable, BoundArgs..., UnboundArgs...>
 		:
 		action(
 			[callable = std::forward<Callable>(callable), ...boundArgs = std::forward<BoundArgs>(args)](auto&&... unboundArgs) mutable -> decltype(auto) {
@@ -39,6 +39,7 @@ public:
 		)
 	{}
 
+	Function() = default;
 	Function(Function&&) = default;
 	Function(const Function&) = default;
 	Function& operator=(Function&&) = default;
