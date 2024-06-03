@@ -100,7 +100,7 @@ public:
 		finishedEv.Wait();
 		ResetEvents(0u);
 	}
-
+protected:
 	struct DataDescriptor
 	{
 		DataDescriptor(IOIterator first, IOIterator last)
@@ -123,7 +123,7 @@ public:
 		int count; //Entry count in data
 		IOIterator first, last;
 	};
-protected:
+	
 	DataDescriptor descriptor;
 	TaskPool& taskPool;
 
