@@ -203,7 +203,7 @@ private:
 
 		//run algorithm within current thread in series
 		for (auto it = std::begin(descriptor) + startIndex,
-			end = std::begin(descriptor)  + endIndex;
+			end = std::begin(descriptor) + endIndex;
 			it != end; ++it)
 		{
 			callable(threadIndex, *it);
