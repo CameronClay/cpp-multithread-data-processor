@@ -20,10 +20,6 @@ export template<typename Callable, typename IOIterator>
 class ParallelProcessor
 {
 public:
-	static constexpr int INVALID_IDX = -1;
-	static constexpr int START_INDEX = 0;
-	static constexpr int EXIT_RESULT = INT_MIN;
-
     //Parameters:
 	//- taskPool: Task pool to use
 	//- callable: Function to call (callable(std::size_t threadIndex, std::iter_reference_t<IOIterator> data))
@@ -101,6 +97,8 @@ public:
 		ResetEvents(0u);
 	}
 protected:
+	static constexpr int START_INDEX = 0;
+	
 	struct DataDescriptor
 	{
 		DataDescriptor(IOIterator first, IOIterator last)
@@ -176,7 +174,6 @@ private:
 
 		return std::optional{ std::make_pair(oldIndex, newIndex) };
 	}
-
 
 	//returns false when processing is complete and true otherwise
 	//fine to inline because only called in one place
